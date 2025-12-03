@@ -72,10 +72,13 @@ def calibrate(dir_name):
         if ret == True:
             objpoints.append(objp)
             imgpoints.append(corners)
-            # Visualization disabled for speed - uncomment below to see corner detection
-            # cv2.drawChessboardCorners(img, (7,7), corners, ret)
-            # cv2.imshow('img', img)
-            # cv2.waitKey(500)
+
+            # Display image with the corners overlayed
+            print('Chessboard corners found')
+            cv2.drawChessboardCorners(img, (7,7), corners, ret)
+            print('Displaying image with detected corners. Close image window to proceed.')
+            cv2.imshow('img', img)
+            cv2.waitKey(500)
 
     # cv2.destroyAllWindows()
     
