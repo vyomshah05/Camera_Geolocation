@@ -45,10 +45,10 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
     """
     # optimize the extrinsic parameters to minimize reprojection error
     imgL = plt.imread('file_pathL')
-    retL, cornersL = cv2.findChessboardCorners(imgL, (8,6), None)
+    retL, cornersL = cv2.findChessboardCorners(imgL, (7,7), None)
     pts2L = cornersL.squeeze().T
     imgR = plt.imread('file_pathR')
-    retR, cornersR = cv2.findChessboardCorners(imgR, (8,6), None)
+    retR, cornersR = cv2.findChessboardCorners(imgR, (7,7), None)
     pts2R = cornersR.squeeze().T
     
     pts3 = np.zeros((3,6*8))
@@ -62,8 +62,10 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
     return camL, camR
 
 if __name__ == '__main__':
-    dir_name = '/Users/doubledogok/CS117/Project/Camera_Geolocation/data/checkerboard1'
-    cam = calibrate_intr(dir_name)
+    from pathlib import Path
+    base_dir = Path(__file__).resolve().parent
+    dir_path = base_dir / 'data' / 'checkerboard1'
+    cam = calibrate_intr(str(dir_path))
     print(cam)
                               
 
