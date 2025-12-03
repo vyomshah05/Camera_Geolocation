@@ -22,8 +22,8 @@ def calibrate(dir_name):
     resultfile = 'calibration.pickle'
 
     # checkerboard coordinates in 3D
-    objp = np.zeros((6*8,3), np.float32)
-    objp[:,:2] = 2.8*np.mgrid[0:8, 0:6].T.reshape(-1,2)
+    objp = np.zeros((7*7,3), np.float32)
+    objp[:,:2] = 2.8*np.mgrid[0:7, 0:7].T.reshape(-1,2)
 
     # arrays to store object points and image points from all the images.
     objpoints = [] # 3d points in real world space
@@ -44,7 +44,7 @@ def calibrate(dir_name):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         # Find the chessboard corners
-        ret, corners = cv2.findChessboardCorners(gray, (8,6), None)
+        ret, corners = cv2.findChessboardCorners(gray, (7,7), None)
 
         # If found, add object points, image points
         if ret == True:
@@ -53,7 +53,7 @@ def calibrate(dir_name):
 
             # Display image with the corners overlayed
             print('Chessboard corners found')
-            cv2.drawChessboardCorners(img, (8,6), corners, ret)
+            cv2.drawChessboardCorners(img, (7,7), corners, ret)
             print('Displaying image with detected corners. Close image window to proceed.')
             cv2.imshow('img', img)
             cv2.waitKey(500)
