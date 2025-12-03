@@ -29,10 +29,11 @@ def calibrate_intr(dir_name):
     # create Camera objects representing the left and right cameras
     # use the known intrinsic parameters you loaded in.
     R_init = np.array([[1,0,0],[0,1,0],[0,0,1]])
-    t_init = np.array([[0,0,0]]).T
-    cam = Camera(f,c,R_init,t_init)
+    t_init = np.array([[0,0,0]]).T    
+    camL = Camera(f,c,R_init,t_init)
+    camR = Camera(f,c,R_init,t_init)
 
-    return cam
+    return (camL, camR)
 
 def calibrate_extr(camL, camR, file_pathL, file_pathR):
     """ Calibrate the extrinsic parameters of the camera given 3D-2D point correspondences.
@@ -62,18 +63,25 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
     return camL, camR
 
 if __name__ == '__main__':
-    dir_name = '/Users/doubledogok/CS117/Project/Camera_Geolocation/data'
-    cam = calibrate_intr(f'{dir_name}/checkerboard1')
-    camL, camR = calibrate_extr(cam, cam, f'{dir_name}/positions/left.JPG', f'{dir_name}/positions/right.JPG')
-    print(cam)
+    from pathlib import Path
+    base_dir = Path(__file__).resolve().parent
+    dir_path = base_dir / 'data' / 'checkerboard1'
+    camLi, camRi = calibrate_intr(str(dir_path))
+    print(camLi)
+    camL, camR = calibrate_extr(camLi, camRi, f'{dir_path}/positions/left.JPG', f'{dir_path}/positions/right.JPG')
     print(camL)
     print(camR)
-    
+
+    tL = camL.t.reshape(3,1)
+    tR = camR.t.reshape(3,1)
+
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,2]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,2]]).T))
     #Plot the camera positions
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    visutils.label_axes(ax)
-    visutils.set_axes_equal_3d(ax)
-    ax.scatter(camL.t[0],camL.t[1],camL.t[2],c='r',marker='o')
-    ax.scatter(camR.t[0],camR.t[1],camR.t[2],c='b',marker='o')
+    ax = fig.add_subplot(1,1,1,projection='3d')
+    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro')
+    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo')
+    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b')
+    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r')
     plt.show()
