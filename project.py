@@ -61,6 +61,9 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
 
     return camL, camR
 
-
+if __name__ == '__main__':
+    dir_name = '/Users/doubledogok/CS117/Project/Camera_Geolocation/data/checkerboard1'
+    cam = calibrate_intr(dir_name)
+    print(cam)
                               
 

@@ -18,7 +18,7 @@ import glob
 import matplotlib.pyplot as plt
 
 def calibrate(dir_name):
-    calibimgfiles = f'{dir_name}/*.jpg'
+    calibimgfiles = f'{dir_name}/*.JPG'
     resultfile = 'calibration.pickle'
 
     # checkerboard coordinates in 3D
@@ -38,6 +38,7 @@ def calibrate(dir_name):
 
     # Step through the list and search for chessboard corners
     for idx, fname in enumerate(images):
+        print(fname)
         img = cv2.imread(fname)
         img_size = (img.shape[1], img.shape[0])
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -51,7 +52,9 @@ def calibrate(dir_name):
             imgpoints.append(corners)
 
             # Display image with the corners overlayed
+            print('Chessboard corners found')
             cv2.drawChessboardCorners(img, (8,6), corners, ret)
+            print('Displaying image with detected corners. Close image window to proceed.')
             cv2.imshow('img', img)
             cv2.waitKey(500)
 
