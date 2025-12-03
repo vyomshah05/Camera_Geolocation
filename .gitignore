@@ -1,0 +1,49 @@
+# ---- OS/Editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logs / cache
+*.log
+.pytest_cache/
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Coverage / test reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+~*
+
+# Windows
+Desktop.ini
+
+# Ignore large/raw data dumps
+data/**/raw/
+data/**/outputs/
