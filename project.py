@@ -75,8 +75,8 @@ if __name__ == '__main__':
     tL = camL.t.reshape(3,1)
     tR = camR.t.reshape(3,1)
 
-    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,2]]).T))
-    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,2]]).T))
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,5]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,5]]).T))
     #Plot the camera positions
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1,projection='3d')
