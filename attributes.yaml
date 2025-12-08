@@ -1,3 +1,15 @@
+_1 JPG params:
+  shutter_speed: 1/40
+  aperture: f2.8
+  ISO: 1250
+  focal_length: 24 mm
+
+_2 JPG params:
+  shutter_speed: 1/40
+  aperture: f2.8
+  ISO: 1250
+  focal_length: 770 mm
+
 right1.JPG and right2.JPG :
   x: 135 cm
   y: 87 cm
@@ -12,8 +24,16 @@ checkerboard height:
   y: 148 cm
 
 
-left.MP4 movement:
-  From top of bed to the right of the bed, and ending at where the right camera was initially located at the start
+left.MP4:
+  movement: From top of bed to the right of the bed, and ending at where the right camera was initially located at the start
+  params:
+    shutter_speed: 1/80
+    apaerture: f2.8
+    ISO: 1250
 
-right.MP4 movement:
-  From the table, up a little, then move close to the right of the checkerboard, ending with a slight upward angle towards the checkerboard 
+right.MP4:
+  movement: From the table, up a little, then move close to the right of the checkerboard, ending with a slight upward angle towards the checkerboard 
+  params:
+    shutter_speed: 1/80
+    apaerture: f2.8
+    ISO: 1250
