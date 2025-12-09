@@ -10,15 +10,20 @@ _2 JPG params:
   ISO: 1250
   focal_length: 70 mm
 
-right1.JPG and right2.JPG :
-  x: 135 cm (right of camera)
+  ## LEFT and RIGHT is determined from the perspective of the checkerboard
+left1.JPG and left2.JPG :
+  x: -135 cm (left of camera)
   y: 87 cm (from ground)
   z: 208 cm
 
-left1.JPG and left2.JPG :
-  x: -145 cm (145 cm left of camera)
+  t = [-135,-61,-208]
+
+right1.JPG and right2.JPG:
+  x: 145 cm (145 cm right of camera)
   y: 238 cm (from ground)
   z: 358 cm
+
+  t = [145,90,-358]
 
 checkerboard height:
   y: 148 cm (from ground)
