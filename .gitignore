@@ -47,3 +47,5 @@ Desktop.ini
 # Ignore large/raw data dumps
 data/**/raw/
 data/**/outputs/
+data/**/pics_from_vid/
+data/**/extracted/
