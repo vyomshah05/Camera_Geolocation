@@ -76,11 +76,12 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
     # create checkerboard 3D points:
     pts3 = np.zeros((3,8*6))
     xx,yy = np.meshgrid(np.arange(8),np.arange(6))
-    pts3[0,:] = 2.8*xx.reshape(1,-1) 
+    pts3[0,:] = -2.8*xx.reshape(1,-1) 
     pts3[1,:] = 2.8*yy.reshape(1,-1) 
     # pose parameters: [rx, ry, rz, tx, ty, tz]
-    camL = calibratePose(pts3,pts2L,camL,np.array([0, 0, 0, -145, 90, 358]))
-    camR = calibratePose(pts3,pts2R,camR,np.array([0, 0, 0, 135, -61, 208]))
+    # change x rotation so camera is looking at checkerboard (Camera's Z axis points towards checkerboard)
+    camL = calibratePose(pts3,pts2L,camL,np.array([-180, 0, 0, -145, 90, 358]))
+    camR = calibratePose(pts3,pts2R,camR,np.array([-180, 0, 0, 135, -61, 208]))
 
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     return camL, camR, pts3
@@ -98,8 +99,8 @@ if __name__ == '__main__':
     print(f'Right camera: {camR}')
 
 
-    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,-30]]).T))
-    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,-30]]).T))
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
 
     #Plot the camera positions
     fig = plt.figure()
