@@ -8,6 +8,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import visutils
 import cv2
 import pickle
+import os
+import imageio
 
 
 def calibrate_intr(dir_name):
@@ -16,10 +18,10 @@ def calibrate_intr(dir_name):
     Args:
         dir_name (str): Directory containing calibration images.
     Returns:
-       Camera: Calibrated camera object.
+       (CameraL, CameraR): Calibrated camera object.
     """
     # perform calibration to get intrinsic parameters
-    #calibrate(dir_name)
+    calibrate(dir_name)
     # load in the calibration parameters
     with open('calibration.pickle','rb') as f:
         calib_p = pickle.load(f)
@@ -35,7 +37,32 @@ def calibrate_intr(dir_name):
 
     return (camL, camR)
 
-def calibrate_extr(camL, camR, file_pathL, file_pathR):
+def calibrate_from_vid(dir_name, video_path):
+    """ Calibrate the camera using images extracted from a video in the specified directory.
+    
+    Args:
+        dir_name (str): Directory containing calibration video.
+    Returns:
+       (CameraL, CameraR): Calibrated camera object.
+    """ 
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration = int(frame_count / fps)
+    
+    #extract frames at 1 second intervals
+    for i in range(duration):
+        frame_i = int(i * int(fps))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_i)
+        ret, frame = cap.read()
+        if ret:
+            cv2.imwrite(os.path.join(dir_name, f'frame_{i}.jpg'), frame)
+    cap.release()
+    return calibrate_intr(dir_name)
+
+def calibrate_extr(camL, camR, file_pathL=None, file_pathR=None, imL=None, imR=None):
     """ Calibrate the extrinsic parameters of the camera given 3D-2D point correspondences.
     
     Args:
@@ -45,13 +72,46 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
         (CameraL, CameraR): Camera objects with updated extrinsic parameters.
     """
     # optimize the extrinsic parameters to minimize reprojection error
-    imgL = cv2.imread(file_pathL)
+    if imL is None and imR is None:
+        imgL = cv2.imread(file_pathL)
+        imgR = cv2.imread(file_pathR)
+    else:
+        imgL = imL
+        imgR = imR
     retL, cornersL = cv2.findChessboardCorners(imgL, (7,7), None)
     pts2L = cornersL.squeeze().T
-    imgR = cv2.imread(file_pathR)
     retR, cornersR = cv2.findChessboardCorners(imgR, (7,7), None)
     pts2R = cornersR.squeeze().T
     
+    # transpose grid for left camera to fix checkerboard detection orientation issue
+    pts2L_grid = pts2L.T.reshape(7,7,2)
+    pts2L_fixed = np.transpose(pts2L_grid, (1,0,2))
+    pts2L = pts2L_fixed.reshape(-1,2).T
+
+
+    # transpose grid for right camera to fix checkerboard detection orientation issue:
+    pts2R_grid = pts2R.T.reshape(7,7,2)
+    pts2R_fixed = np.fliplr(pts2R_grid)
+    pts2R = pts2R_fixed.reshape(-1, 2).T
+
+    # visualize left camera:
+    cv2.drawChessboardCorners(imgL, (7,7), cornersL, retL)
+    window_name_L = "Left Camera"
+    cv2.namedWindow(window_name_L, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name_L, 800, 600)
+    cv2.imshow(window_name_L, imgL)
+    cv2.waitKey(1000)
+
+    # visualize right camera:
+    cv2.drawChessboardCorners(imgR, (7,7), cornersR, retR)
+    
+    window_name_R = "Right Camera"
+    cv2.namedWindow(window_name_R, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name_R, 800, 600)
+    cv2.imshow(window_name_R, imgR)
+    cv2.waitKey(1000)
+
+    # create checkerboard 3D points:
     # transpose grid for left camera to fix checkerboard detection orientation issue
     pts2L_grid = pts2L.T.reshape(7,7,2)
     pts2L_fixed = np.transpose(pts2L_grid, (1,0,2))
@@ -88,8 +148,126 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
 
     camL = calibratePose(pts3,pts2L,camL,np.array([0,0.2,0,-40,0,-200]))
     camR = calibratePose(pts3,pts2R,camR,np.array([0,-0.2,0,40,0,-200]))
+    camL = calibratePose(pts3,pts2L,camL,np.array([0,0.2,0,-40,0,-200]))
+    camR = calibratePose(pts3,pts2R,camR,np.array([0,-0.2,0,40,0,-200]))
 
     return camL, camR
+
+def calibrate_extr(camL, camR, imgL, imgR):
+    """Calibrate extrinsics from left/right calibration frames."""
+    
+    # FIND CORNERS LEFT
+    retL, cornersL = cv2.findChessboardCorners(imgL, (7,7), None)
+    if not retL: 
+        return None, None
+    pts2L = cornersL.squeeze().T
+
+    # FIND CORNERS RIGHT
+    retR, cornersR = cv2.findChessboardCorners(imgR, (7,7), None)
+    if not retR:
+        return None, None
+    pts2R = cornersR.squeeze().T
+    
+    # FIX ORIENTATIONS (same as your code)
+    pts2L_grid = pts2L.T.reshape(7,7,2)
+    pts2L_fixed = np.transpose(pts2L_grid, (1,0,2))
+    pts2L = pts2L_fixed.reshape(-1,2).T
+
+    pts2R_grid = pts2R.T.reshape(7,7,2)
+    pts2R_fixed = np.fliplr(pts2R_grid)
+    pts2R = pts2R_fixed.reshape(-1, 2).T
+
+    # 3D POINTS
+    pts3 = np.zeros((3,7*7))
+    yy,xx = np.meshgrid(np.arange(7),np.arange(7))
+    pts3[0,:] = 2.8*xx.reshape(-1)
+    pts3[1,:] = 2.8*yy.reshape(-1)
+
+    # CALIBRATION
+    camL = calibratePose(pts3, pts2L, camL, np.array([0,0.2,0,-40,0,-200]))
+    camR = calibratePose(pts3, pts2R, camR, np.array([0,-0.2,0,40,0,-200]))
+
+    return camL, camR
+
+def extrinsic_video(left_video_path, right_video_path, camL_init, camR_init, dir_name="frames", fps_out=10):
+    os.makedirs(dir_name, exist_ok=True)
+
+    capL = cv2.VideoCapture(left_video_path)
+    capR = cv2.VideoCapture(right_video_path)
+
+    fpsL = capL.get(cv2.CAP_PROP_FPS)
+    fpsR = capR.get(cv2.CAP_PROP_FPS)
+
+    fps = int(min(fpsL, fpsR))
+    frame_interval = fps  
+
+    frame_index = 0
+    saved_frames = []
+
+    while True:
+        capL.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        capR.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+
+        retL, imgL = capL.read()
+        retR, imgR = capR.read()
+        if not retL or not retR:
+            break
+
+        # calibrate extrinsics for this frame pair
+        camL, camR = calibrate_extr(camL_init, camR_init, imgL, imgR)
+        if camL is None:
+            print(f"No checkerboard at t={frame_index/fps}s")
+            frame_index += frame_interval
+            continue
+
+        # PLOT & SAVE
+        fig = plt.figure(figsize=(6,6))
+        ax = fig.add_subplot(111, projection='3d')
+        lookL = np.hstack((camL.t, camL.t + camL.R @ np.array([[0,0,30]]).T))
+        lookR = np.hstack((camR.t, camR.t + camR.R @ np.array([[0,0,30]]).T))
+
+        pts3 = np.zeros((3,7*7))
+        yy,xx = np.meshgrid(np.arange(7),np.arange(7))
+        pts3[0,:] = 2.8*xx.reshape(-1)
+        pts3[1,:] = 2.8*yy.reshape(-1)
+
+        ax.plot(camL.t[0], camL.t[1], camL.t[2], 'bo', label='Left Cam')
+        ax.plot(camR.t[0], camR.t[1], camR.t[2], 'ro', label='Right Cam')
+        ax.plot(lookL[0,:], lookL[1,:], lookL[2,:], 'b-')
+        ax.plot(lookR[0,:], lookR[1,:], lookR[2,:], 'r-')
+        ax.scatter(pts3[0,:], pts3[1,:], pts3[2,:], c='k', marker='x')
+
+        ax.set_title(f"Extrinsic Calibration (t={frame_index/fps:.1f}s)")
+        ax.set_xlabel("X (cm)")
+        ax.set_ylabel("Y (cm)")
+        ax.set_zlabel("Z (cm)")
+        ax.legend()
+        ax.view_init(elev=-90, azim=90)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        frame_path = f"{dir_name}/frame_{len(saved_frames):04d}.png"
+        plt.savefig(frame_path)
+        plt.close(fig)
+
+        saved_frames.append(frame_path)
+
+        frame_index += frame_interval
+
+    capL.release()
+    capR.release()
+
+    # MAKE VIDEO
+    video_out = f"{dir_name}/calibration_result.mp4"
+    writer = imageio.get_writer(video_out, fps=fps_out)
+    for f in saved_frames:
+        writer.append_data(imageio.imread(f))
+    writer.close()
+
+    # MAKE GIF
+    gif_out = f"{dir_name}/calibration.gif"
+    imageio.mimsave(gif_out, [imageio.imread(f) for f in saved_frames], fps=5)
+
+    return video_out, gif_out
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -98,6 +276,9 @@ if __name__ == '__main__':
     camLi, camRi = calibrate_intr(str(dir_path))
     print(camLi)
     camL, camR = calibrate_extr(camLi, camRi, f'{dir_path}/positions/left.JPG', f'{dir_path}/positions/right.JPG')
+    print(f'Left camera: {camL}')
+    print(f'Right camera: {camR}')
+
     print(f'Left camera: {camL}')
     print(f'Right camera: {camR}')
 
@@ -111,9 +292,35 @@ if __name__ == '__main__':
     pts3[0,:] = 2.8*xx.reshape(1,-1)
     pts3[1,:] = 2.8*yy.reshape(1,-1)
 
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
+    
+    # create checkerboard 3D points:
+    pts3 = np.zeros((3,7*7))
+    yy,xx = np.meshgrid(np.arange(7),np.arange(7))
+    pts3[0,:] = 2.8*xx.reshape(1,-1)
+    pts3[1,:] = 2.8*yy.reshape(1,-1)
+
     #Plot the camera positions
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1,projection='3d')
+    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', label='Right Camera')
+    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', label='Left Camera')
+    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b-', linewidth=2)
+    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r-', linewidth=2)
+    ax.scatter(pts3[0,:],pts3[1,:],pts3[2,:],c='k',marker='x',label='Checkerboard Points')
+    ax.set_xlabel('X (cm)')
+    ax.set_ylabel('Y (cm)')     
+    ax.set_zlabel('Z (cm)')
+    ax.set_title("Camera Localization Result")
+    ax.legend()
+
+    # set plot viewing angle:
+    # z+ into the screen, x+ to the right, y+ up
+    ax.view_init(elev=-90, azim=90, roll=0)
+
+    # fix aspect ratio so 1cm is standard in all directions
+    visutils.set_axes_equal_3d(ax)
     ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', label='Right Camera')
     ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', label='Left Camera')
     ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b-', linewidth=2)
