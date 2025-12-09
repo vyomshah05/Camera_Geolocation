@@ -11,17 +11,17 @@ _2 JPG params:
   focal_length: 70 mm
 
 right1.JPG and right2.JPG :
-  x: 135 cm
-  y: 87 cm
+  x: 135 cm (right of camera)
+  y: 87 cm (from ground)
   z: 208 cm
 
 left1.JPG and left2.JPG :
-  x: -145 cm
-  y: 238 cm
+  x: -145 cm (145 cm left of camera)
+  y: 238 cm (from ground)
   z: 358 cm
 
 checkerboard height:
-  y: 148 cm
+  y: 148 cm (from ground)
 
 
 left.MP4:

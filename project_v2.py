@@ -19,7 +19,7 @@ def calibrate_intr(dir_name):
        Camera: Calibrated camera object.
     """
     # perform calibration to get intrinsic parameters
-    calibrate(dir_name)
+    #calibrate(dir_name)
     # load in the calibration parameters
     with open('calibration.pickle','rb') as f:
         calib_p = pickle.load(f)
@@ -75,16 +75,16 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
 
     # create checkerboard 3D points:
     pts3 = np.zeros((3,8*6))
-    yy,xx = np.meshgrid(np.arange(8),np.arange(6))
-    pts3[0,:] = 2.8*xx.reshape(1,-1)
-    pts3[1,:] = 2.8*yy.reshape(1,-1)
-
+    xx,yy = np.meshgrid(np.arange(8),np.arange(6))
+    pts3[0,:] = 2.8*xx.reshape(1,-1) 
+    pts3[1,:] = 2.8*yy.reshape(1,-1) 
     # pose parameters: [rx, ry, rz, tx, ty, tz]
     camL = calibratePose(pts3,pts2L,camL,np.array([0, 0, 0, -145, 90, 358]))
     camR = calibratePose(pts3,pts2R,camR,np.array([0, 0, 0, 135, -61, 208]))
 
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     return camL, camR, pts3
+    
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -104,20 +104,20 @@ if __name__ == '__main__':
     #Plot the camera positions
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1,projection='3d')
-    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', label='Right Camera')
-    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', label='Left Camera')
-    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b-', linewidth=2)
-    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r-', linewidth=2)
-    ax.scatter(pts3[0,:],pts3[1,:],pts3[2,:],c='k',marker='x',label='Checkerboard Points')
+    ax.plot(camR.t[0],camR.t[2],camR.t[1],'ro', label='Right Camera')
+    ax.plot(camL.t[0],camL.t[2],camL.t[1],'bo', label='Left Camera')
+    ax.plot(lookL[0,:],lookL[2,:],lookL[1,:],'b-', linewidth=2)
+    ax.plot(lookR[0,:],lookR[2,:],lookR[1,:],'r-', linewidth=2)
+    ax.scatter(pts3[0,:],pts3[2,:],pts3[1,:],c='k',marker='x',label='Checkerboard Points')
     ax.set_xlabel('X (cm)')
-    ax.set_ylabel('Y (cm)')     
-    ax.set_zlabel('Z (cm)')
+    ax.set_ylabel('Z (cm)')     
+    ax.set_zlabel('Y (cm)')
     ax.set_title("Camera Localization Result")
     ax.legend()
 
     # set plot viewing angle:
     # z+ into the screen, x+ to the right, y+ up
-    ax.view_init(elev=-90, azim=90, roll=180)
+    ax.view_init(elev=20, azim=-90, roll=0)
 
     # fix aspect ratio so 1cm is standard in all directions
     visutils.set_axes_equal_3d(ax)
