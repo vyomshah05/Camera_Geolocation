@@ -101,15 +101,13 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
 
     # create checkerboard 3D points:
     pts3 = np.zeros((3,8*6))
-    yy,xx = np.meshgrid(np.arange(8),np.arange(6))
+    xx,yy = np.meshgrid(np.arange(8),np.arange(6))
     pts3[0,:] = 2.8*xx.reshape(1,-1)
     pts3[1,:] = 2.8*yy.reshape(1,-1)
 
     # Initial pose parameters: [rx, ry, rz, tx, ty, tz]
-    # Left Camera: (-145, 90, 358) cm, rotate right ~0.35 rad, tilt down ~0.2 rad
-    camL = calibratePose(pts3,pts2L,camL,np.array([0, 0, 0, -145, 90, 358]))
-    # Right Camera: (135, -61, 208) cm, rotate left ~-0.55 rad, tilt up ~0.25 rad  
-    camR = calibratePose(pts3,pts2R,camR,np.array([0, 0, 0, 135, -61, 208]))
+    camL = calibratePose(pts3,pts2L,camL,np.array([-180, 0, 0, -145, -61, 208]))
+    camR = calibratePose(pts3,pts2R,camR,np.array([-180, 0, 0, 135, 90, 358]))
 
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     return camL, camR, pts3
@@ -126,8 +124,8 @@ if __name__ == '__main__':
     print(f'Right camera: {camR}')
 
 
-    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,-30]]).T))
-    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,-30]]).T))
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
 
     #Plot the camera positions
     fig = plt.figure()
@@ -144,9 +142,73 @@ if __name__ == '__main__':
     ax.legend()
 
     # set plot viewing angle:
-    # z+ into the screen, x+ to the right, y+ up
-    ax.view_init(elev=-90, azim=90, roll=180)
+    # z+ out of the screen, x+ to the right, y+ up
+    ax.view_init(elev=35, azim=163, roll=-100)
 
     # fix aspect ratio so 1cm is standard in all directions
     visutils.set_axes_equal_3d(ax)
+
+    # Multi-view visualization
+    lookL_short = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,50]]).T))
+    lookR_short = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,50]]).T))
+    
+    # visualize the left and right cameras from multiple views
+    fig2 = plt.figure(figsize=(12, 10))
+    
+    # 3D view
+    ax = fig2.add_subplot(2,2,1,projection='3d')
+    ax.view_init(elev=35, azim=163, roll=-100)
+    ax.scatter(pts3[0,:],pts3[1,:],pts3[2,:],'k', marker='x', label='Checkerboard')
+    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', markersize=10, label='Right Camera')
+    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', markersize=10, label='Left Camera')
+    ax.plot(lookL_short[0,:],lookL_short[1,:],lookL_short[2,:],'b-', linewidth=2)
+    ax.plot(lookR_short[0,:],lookR_short[1,:],lookR_short[2,:],'r-', linewidth=2)
+    visutils.set_axes_equal_3d(ax)
+    visutils.label_axes(ax)
+    ax.set_title('Scene 3D View')
+    ax.legend()
+    
+    # XZ view
+    ax = fig2.add_subplot(2,2,2)
+    ax.plot(pts3[0,:],-pts3[2,:],'k.', label='Checkerboard')
+    ax.plot(camR.t[0],-camR.t[2],'ro', markersize=10, label='Right Camera')
+    ax.plot(camL.t[0],-camL.t[2],'bo', markersize=10, label='Left Camera')
+    ax.plot(lookL_short[0,:],-lookL_short[2,:],'b-', linewidth=2)
+    ax.plot(lookR_short[0,:],-lookR_short[2,:],'r-', linewidth=2)
+    ax.set_title('XZ-view (Top View)')
+    ax.grid()
+    ax.set_xlabel('x (cm)')
+    ax.set_ylabel('z (cm)')
+    ax.legend()
+    ax.axis('equal')
+    
+    # YZ view (rotated 90° counterclockwise)
+    ax = fig2.add_subplot(2,2,3)
+    ax.plot(-pts3[2,:],pts3[1,:],'k.', label='Checkerboard')
+    ax.plot(-camR.t[2],camR.t[1],'ro', markersize=10, label='Right Camera')
+    ax.plot(-camL.t[2],camL.t[1],'bo', markersize=10, label='Left Camera')
+    ax.plot(-lookL_short[2,:],lookL_short[1,:],'b-', linewidth=2)
+    ax.plot(-lookR_short[2,:],lookR_short[1,:],'r-', linewidth=2)
+    ax.set_title('YZ-view (Side View)')
+    ax.grid()
+    ax.set_xlabel('-z (cm)')
+    ax.set_ylabel('y (cm)')
+    ax.legend()
+    ax.axis('equal')
+    
+    # XY view
+    ax = fig2.add_subplot(2,2,4)
+    ax.plot(pts3[0,:],pts3[1,:],'k.', label='Checkerboard')
+    ax.plot(camR.t[0],camR.t[1],'ro', markersize=10, label='Right Camera')
+    ax.plot(camL.t[0],camL.t[1],'bo', markersize=10, label='Left Camera')
+    ax.plot(lookL_short[0,:],lookL_short[1,:],'b-', linewidth=2)
+    ax.plot(lookR_short[0,:],lookR_short[1,:],'r-', linewidth=2)
+    ax.set_title('XY-view (Front View from Checkerboard)')
+    ax.grid()
+    ax.set_xlabel('x (cm)')
+    ax.set_ylabel('y (cm)')
+    ax.legend()
+    ax.axis('equal')
+    
+    plt.tight_layout()
     plt.show()
