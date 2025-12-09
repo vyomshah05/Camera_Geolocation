@@ -45,24 +45,49 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
         (CameraL, CameraR): Camera objects with updated extrinsic parameters.
     """
     # optimize the extrinsic parameters to minimize reprojection error
-    imgL = plt.imread(file_pathL)
-    retL, cornersL = cv2.findChessboardCorners(imgL, (7,7), None)
-    imgL = plt.imread('file_pathL')
+    imgL = cv2.imread(file_pathL)
     retL, cornersL = cv2.findChessboardCorners(imgL, (7,7), None)
     pts2L = cornersL.squeeze().T
-    imgR = plt.imread(file_pathR)
-    retR, cornersR = cv2.findChessboardCorners(imgR, (7,7), None)
-    imgR = plt.imread('file_pathR')
+    imgR = cv2.imread(file_pathR)
     retR, cornersR = cv2.findChessboardCorners(imgR, (7,7), None)
     pts2R = cornersR.squeeze().T
     
+    # transpose grid for left camera to fix checkerboard detection orientation issue
+    pts2L_grid = pts2L.T.reshape(7,7,2)
+    pts2L_fixed = np.transpose(pts2L_grid, (1,0,2))
+    pts2L = pts2L_fixed.reshape(-1,2).T
+
+
+    # transpose grid for right camera to fix checkerboard detection orientation issue:
+    pts2R_grid = pts2R.T.reshape(7,7,2)
+    pts2R_fixed = np.fliplr(pts2R_grid)
+    pts2R = pts2R_fixed.reshape(-1, 2).T
+
+    # visualize left camera:
+    cv2.drawChessboardCorners(imgL, (7,7), cornersL, retL)
+    window_name_L = "Left Camera"
+    cv2.namedWindow(window_name_L, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name_L, 800, 600)
+    cv2.imshow(window_name_L, imgL)
+    cv2.waitKey(1000)
+
+    # visualize right camera:
+    cv2.drawChessboardCorners(imgR, (7,7), cornersR, retR)
+    
+    window_name_R = "Right Camera"
+    cv2.namedWindow(window_name_R, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name_R, 800, 600)
+    cv2.imshow(window_name_R, imgR)
+    cv2.waitKey(1000)
+
+    # create checkerboard 3D points:
     pts3 = np.zeros((3,7*7))
     yy,xx = np.meshgrid(np.arange(7),np.arange(7))
     pts3[0,:] = 2.8*xx.reshape(1,-1)
     pts3[1,:] = 2.8*yy.reshape(1,-1)
 
-    camL = calibratePose(pts3,pts2L,camL,np.array([0,0,0,0,0,-2]))
-    camR = calibratePose(pts3,pts2R,camR,np.array([0,0,0,0,0,-2]))
+    camL = calibratePose(pts3,pts2L,camL,np.array([0,0.2,0,-40,0,-200]))
+    camR = calibratePose(pts3,pts2R,camR,np.array([0,-0.2,0,40,0,-200]))
 
     return camL, camR
 
@@ -73,19 +98,37 @@ if __name__ == '__main__':
     camLi, camRi = calibrate_intr(str(dir_path))
     print(camLi)
     camL, camR = calibrate_extr(camLi, camRi, f'{dir_path}/positions/left.JPG', f'{dir_path}/positions/right.JPG')
-    print(camL)
-    print(camR)
+    print(f'Left camera: {camL}')
+    print(f'Right camera: {camR}')
 
-    tL = camL.t.reshape(3,1)
-    tR = camR.t.reshape(3,1)
 
-    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,5]]).T))
-    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,5]]).T))
+    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
+    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
+    
+    # create checkerboard 3D points:
+    pts3 = np.zeros((3,7*7))
+    yy,xx = np.meshgrid(np.arange(7),np.arange(7))
+    pts3[0,:] = 2.8*xx.reshape(1,-1)
+    pts3[1,:] = 2.8*yy.reshape(1,-1)
+
     #Plot the camera positions
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1,projection='3d')
-    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro')
-    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo')
-    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b')
-    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r')
+    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', label='Right Camera')
+    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', label='Left Camera')
+    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b-', linewidth=2)
+    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r-', linewidth=2)
+    ax.scatter(pts3[0,:],pts3[1,:],pts3[2,:],c='k',marker='x',label='Checkerboard Points')
+    ax.set_xlabel('X (cm)')
+    ax.set_ylabel('Y (cm)')     
+    ax.set_zlabel('Z (cm)')
+    ax.set_title("Camera Localization Result")
+    ax.legend()
+
+    # set plot viewing angle:
+    # z+ into the screen, x+ to the right, y+ up
+    ax.view_init(elev=-90, azim=90, roll=0)
+
+    # fix aspect ratio so 1cm is standard in all directions
+    visutils.set_axes_equal_3d(ax)
     plt.show()
