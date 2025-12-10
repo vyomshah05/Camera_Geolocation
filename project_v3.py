@@ -38,14 +38,14 @@ def calibratePoseSmooth(pts3, pts2, cam_init, params_init, prev_params=None, smo
         
         # Smoothness penalty: penalize deviation from previous parameters
         # deviation between rotation and translation should be weighted seperately
-        rotation_diff = params[0:3] - prev_params[0:3]  # in degrees
-        translation_diff = params[3:6] - prev_params[3:6]  # in cm
+        rotation_diff = params[0:3] - prev_params[0:3]
+        translation_diff = params[3:6] - prev_params[3:6]
         
         # Scale rotation difference (normalize by expected max change per frame)
         # since our recording only has very slow movement, we can expect < 10 degrees rotation
         smoothness_penalty = np.concatenate([
-            smoothness_weight * rotation_diff / 10.0,  # normalize to ~10 deg
-            smoothness_weight * translation_diff / 20.0  # normalize to ~20 cm
+            smoothness_weight * rotation_diff / 10.0,
+            smoothness_weight * translation_diff / 20.0
         ])
         
         return np.concatenate([reproj_error, smoothness_penalty])
@@ -239,6 +239,34 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         lookL_short = np.hstack((camL_cal.t, camL_cal.t + camL_cal.R @ np.array([[0,0,50]]).T))
         lookR_short = np.hstack((camR_cal.t, camR_cal.t + camR_cal.R @ np.array([[0,0,50]]).T))
         
+        pL = camL_cal.t.flatten()
+        pR = camR_cal.t.flatten()
+
+        dx = pR[0] - pL[0]
+        dy = pR[1] - pL[1]
+        dz = pR[2] - pL[2]
+        dist = np.linalg.norm(pL - pR)
+        mid = (pL + pR) / 2.0
+
+        text_3d = (
+            f"x difference: {dx:.1f} cm\n"
+            f"y difference: {dy:.1f} cm\n"
+            f"z difference: {dz:.1f} cm\n"
+            f"distance: {dist:.1f} cm"
+        )
+        text_xz = (
+            f"x difference: {dx:.1f} cm\n"
+            f"z difference: {dz:.1f} cm"
+        )
+        text_yz = (
+            f"y difference: {dy:.1f} cm\n"
+            f"z difference: {dz:.1f} cm"
+        )
+        text_xy = (
+            f"x difference: {dx:.1f} cm\n"
+            f"y difference: {dy:.1f} cm"
+        )
+
         # Clear all axes
         ax_3d.clear()
         ax_xz.clear()
@@ -256,6 +284,8 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         ax_3d.plot(camL_cal.t[0],camL_cal.t[1],camL_cal.t[2],'bo', markersize=10, label='Left Camera')
         ax_3d.plot(lookL_short[0,:],lookL_short[1,:],lookL_short[2,:],'b-', linewidth=2)
         ax_3d.plot(lookR_short[0,:],lookR_short[1,:],lookR_short[2,:],'r-', linewidth=2)
+        ax_3d.plot([pL[0], pR[0]], [pL[1], pR[1]], [pL[2], pR[2]], '--',color='gray', linewidth=1)
+        ax_3d.text(mid[0], mid[1], mid[2], text_3d, color='purple', bbox=dict(facecolor='white', alpha=0.7, edgecolor='black'))
         visutils.set_axes_equal_3d(ax_3d)
         visutils.label_axes(ax_3d)
         ax_3d.set_title('Scene 3D View')
@@ -267,6 +297,8 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         ax_xz.plot(camL_cal.t[0],-camL_cal.t[2],'bo', markersize=10, label='Left Camera')
         ax_xz.plot(lookL_short[0,:],-lookL_short[2,:],'b-', linewidth=2)
         ax_xz.plot(lookR_short[0,:],-lookR_short[2,:],'r-', linewidth=2)
+        ax_xz.plot([pL[0], pR[0]], [-pL[2], -pR[2]], '--',color='gray', linewidth=1)
+        ax_xz.text(mid[0], -mid[2], text_xz, color='purple', bbox=dict(facecolor='white', alpha=0.7, edgecolor='black'))
         ax_xz.set_title('XZ-view (Top View)')
         ax_xz.grid()
         ax_xz.set_xlabel('x (cm)')
@@ -280,6 +312,8 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         ax_yz.plot(-camL_cal.t[2],camL_cal.t[1],'bo', markersize=10, label='Left Camera')
         ax_yz.plot(-lookL_short[2,:],lookL_short[1,:],'b-', linewidth=2)
         ax_yz.plot(-lookR_short[2,:],lookR_short[1,:],'r-', linewidth=2)
+        ax_yz.plot([-pL[2], -pR[2]], [pL[1], pR[1]], '--',color='gray', linewidth=1)
+        ax_yz.text(-mid[2], mid[1], text_yz, color='purple', bbox=dict(facecolor='white', alpha=0.7, edgecolor='black'))
         ax_yz.set_title('YZ-view (Side View)')
         ax_yz.grid()
         ax_yz.set_xlabel('-z (cm)')
@@ -293,6 +327,8 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         ax_xy.plot(camL_cal.t[0],camL_cal.t[1],'bo', markersize=10, label='Left Camera')
         ax_xy.plot(lookL_short[0,:],lookL_short[1,:],'b-', linewidth=2)
         ax_xy.plot(lookR_short[0,:],lookR_short[1,:],'r-', linewidth=2)
+        ax_xy.plot([pL[0], pR[0]], [pL[1], pR[1]], '--',color='gray', linewidth=1)
+        ax_xy.text(mid[0], mid[1], text_xy, color='purple', bbox=dict(facecolor='white', alpha=0.7, edgecolor='black'))
         ax_xy.set_title('XY-view (Front View from Checkerboard)')
         ax_xy.grid()
         ax_xy.set_xlabel('x (cm)')
