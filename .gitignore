@@ -49,3 +49,4 @@ data/**/raw/
 data/**/outputs/
 data/**/pics_from_vid/
 data/**/extracted/
+data/**/camera_positions.json
