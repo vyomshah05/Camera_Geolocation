@@ -21,9 +21,10 @@ def calibrate_intr(dir_name):
        (CameraL, CameraR): Calibrated camera object.
     """
     # perform calibration to get intrinsic parameters
-    calibrate(dir_name)
+    if not Path('calibration_v1.pickle').exists():
+        calibrate(dir_name)
     # load in the calibration parameters
-    with open('calibration.pickle','rb') as f:
+    with open('calibration_v1.pickle','rb') as f:
         calib_p = pickle.load(f)
     # extract intrinsic parameters
     f = (calib_p['fx']+calib_p['fy'])/2
