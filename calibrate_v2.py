@@ -17,11 +17,11 @@ import cv2
 import glob
 import matplotlib.pyplot as plt
 
-def calibrate(dir_name):
+def calibrate(dir_name, pickle_file):
     calibimgfiles = f'{dir_name}/*.jpg'
-    resultfile = 'calibration.pickle'
+    resultfile = pickle_file
 
-    # checkerboard coordinates in 3D (7x7 inner corners for 8x8 board)
+    # checkerboard coordinates in 3D 
     objp = np.zeros((8*6,3), np.float32)
     objp[:,:2] = 2.8*np.mgrid[0:8, 0:6].T.reshape(-1,2)
 
@@ -82,12 +82,12 @@ def calibrate(dir_name):
             cv2.drawChessboardCorners(img, (8,6), corners, ret)
             
             # Resize for display to fit on screen
-            display_scale = 0.5
+            display_scale = 0.2
             display_img = cv2.resize(img, None, fx=display_scale, fy=display_scale, interpolation=cv2.INTER_AREA)
             
             print('Displaying image with detected corners. Close image window to proceed.')
             cv2.imshow('img', display_img)
-            cv2.waitKey(3000)
+            cv2.waitKey(1000)
 
     # cv2.destroyAllWindows()
     

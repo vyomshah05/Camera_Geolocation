@@ -18,10 +18,11 @@ def calibrate_intr(dir_name):
     Returns:
        Camera: Calibrated camera object.
     """
-    # perform calibration to get intrinsic parameters
-    #calibrate(dir_name)
+    
+    if not Path('calibration_v2.pickle').exists():
+        calibrate(dir_name, pickle_file='calibration_v2.pickle')
     # load in the calibration parameters
-    with open('calibration.pickle','rb') as f:
+    with open('calibration_v2.pickle','rb') as f:
         calib_p = pickle.load(f)
     # extract intrinsic parameters
     f = (calib_p['fx']+calib_p['fy'])/2
@@ -103,27 +104,6 @@ if __name__ == '__main__':
     lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
     lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
 
-    #Plot the camera positions
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1,projection='3d')
-    ax.plot(camR.t[0],camR.t[1],camR.t[2],'ro', label='Right Camera')
-    ax.plot(camL.t[0],camL.t[1],camL.t[2],'bo', label='Left Camera')
-    ax.plot(lookL[0,:],lookL[1,:],lookL[2,:],'b-', linewidth=2)
-    ax.plot(lookR[0,:],lookR[1,:],lookR[2,:],'r-', linewidth=2)
-    ax.scatter(pts3[0,:],pts3[1,:],pts3[2,:],c='k',marker='x',label='Checkerboard Points')
-    ax.set_xlabel('X (cm)')
-    ax.set_ylabel('Y (cm)')     
-    ax.set_zlabel('Z (cm)')
-    ax.set_title("Camera Localization Result")
-    ax.legend()
-
-    # set plot viewing angle:
-    # z+ out of the screen, x+ to the right, y+ up
-    ax.view_init(elev=35, azim=163, roll=-100)
-
-    # fix aspect ratio so 1cm is standard in all directions
-    visutils.set_axes_equal_3d(ax)
-    
     # Multi-view visualization
     lookL_short = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,50]]).T))
     lookR_short = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,50]]).T))
@@ -187,4 +167,45 @@ if __name__ == '__main__':
     ax.axis('equal')
     
     plt.tight_layout()
+    
+    print("\nRunning camera position validation calculations:")
+    
+    left_gt = np.array([-135, -61, -208])
+    right_gt = np.array([145, 90, -358])
+    
+    left_est = camL.t.flatten()
+    right_est = camR.t.flatten()
+    
+    left_error = np.linalg.norm(left_est - left_gt)
+    right_error = np.linalg.norm(right_est - right_gt)
+    
+    left_pct = (left_error / np.linalg.norm(left_gt)) * 100
+    right_pct = (right_error / np.linalg.norm(right_gt)) * 100
+    
+    estimated_distance = np.linalg.norm(right_est - left_est)
+    ground_truth_distance = np.linalg.norm(right_gt - left_gt)
+    relative_error = abs(estimated_distance - ground_truth_distance)
+    relative_pct = (relative_error / ground_truth_distance) * 100
+    
+    print("\nLeft Camera Positioning Error:")
+    print(f"  Start:")
+    print(f"    Estimated t:    [{left_est[0]:.2f}, {left_est[1]:.2f}, {left_est[2]:.2f}]")
+    print(f"    Ground Truth t: [{left_gt[0]:.2f}, {left_gt[1]:.2f}, {left_gt[2]:.2f}]")
+    print(f"    Error:          {left_error:.2f} cm ({left_pct:.2f}%)")
+    
+    print("\nRight Camera Positioning Error:")
+    print(f"  Start:")
+    print(f"    Estimated t:     [{right_est[0]:.2f}, {right_est[1]:.2f}, {right_est[2]:.2f}]")
+    print(f"    Ground Truth t:  [{right_gt[0]:.2f}, {right_gt[1]:.2f}, {right_gt[2]:.2f}]")
+    print(f"    Error:           {right_error:.2f} cm ({right_pct:.2f}%)")
+    
+    print("\nRelative (Camera-to-Camera Distance) Positioning:")
+    print(f"  Start Error:      {relative_error:.2f} cm ({relative_pct:.2f}%)")
+    
+    print("\nAverage of left and right camera absolute positioning errors:")
+    overall_mean = (left_error + right_error) / 2
+    overall_pct = (left_pct + right_pct) / 2
+    print(f"  Mean Absolute Error: {overall_mean:.2f} cm")
+    print(f"  Mean Percentage Error:{overall_pct:.2f}%")
+    
     plt.show()

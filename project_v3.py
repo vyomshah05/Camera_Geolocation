@@ -65,9 +65,10 @@ def calibrate_intr(dir_name):
        Camera: Calibrated camera object.
     """
     # perform calibration to get intrinsic parameters
-    #calibrate(dir_name)
+    if not Path('calibration_v3.pickle').exists():
+        calibrate(dir_name, pickle_file='calibration_v3.pickle')
     # load in the calibration parameters
-    with open('calibration.pickle','rb') as f:
+    with open('calibration_v3.pickle','rb') as f:
         calib_p = pickle.load(f)
     # extract intrinsic parameters
     f = (calib_p['fx']+calib_p['fy'])/2
@@ -193,12 +194,12 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
             if prev_paramsL is not None and prev_paramsR is not None:
                 init_poseL = prev_paramsL
                 init_poseR = prev_paramsR
-                print(f"Previous cam params:")
-                print(f"Left: {init_poseL}")
-                print(f"Right: {init_poseR}")
+                #print(f"Previous cam params:")
+                #print(f"Left: {init_poseL}")
+                #print(f"Right: {init_poseR}")
                 camL_cal, camR_cal, pts3 = calibrate_extr(camL_copy, camR_copy, left_path, right_path, init_poseL, init_poseR, prev_paramsL, prev_paramsR)
             else:
-                print(f"Use default init params")
+                #print(f"Use default init params")
                 camL_cal, camR_cal, pts3 = calibrate_extr(camL_copy, camR_copy, left_path, right_path)
             
             # Extract parameters from calibrated cameras for next frame
@@ -209,10 +210,10 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
             prev_paramsL = np.concatenate([euler_L, camL_cal.t.flatten()])
             prev_paramsR = np.concatenate([euler_R, camR_cal.t.flatten()])
             
-            print(f"Positions: Left: {camL_cal.t.T}, Right: {camR_cal.t.T}")
+            #print(f"Positions: Left: {camL_cal.t.T}, Right: {camR_cal.t.T}")
             results.append((camL_cal, camR_cal, pts3))
         except Exception as e:
-            print(f"Unable to process frame pair {i}: {e}")
+            #print(f"Unable to process frame pair {i}: {e}")
             continue
     
     if not results:
@@ -220,10 +221,10 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         return []
     
     # Create interactive visualization with slider
-    fig = plt.figure(figsize=(14, 11))
+    fig = plt.figure(figsize=(16, 10))
     
-    # Adjust figure layout to make room for slider
-    plt.subplots_adjust(bottom=0.1, top=0.95, left=0.05, right=0.95, hspace=0.3, wspace=0.3)
+    # Adjust figure layout to make room for slider at bottom
+    plt.subplots_adjust(bottom=0.12, top=0.95, left=0.05, right=0.95, hspace=0.3, wspace=0.3)
     
     # Create subplots
     ax_3d = fig.add_subplot(2, 2, 1, projection='3d')
@@ -378,9 +379,7 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
         json.dump(camera_positions, f, indent=2)
     print(f"\ncam pos dir: {json_path}")
     
-    plt.show()
-    
-    return results
+    return results, fig, slider
 
 def calibrate_extr(camL, camR, file_pathL, file_pathR, init_poseL=None, init_poseR=None, prev_poseL=None, prev_poseR=None):
     """ Calibrate the extrinsic parameters of the camera given 3D-2D point correspondences.
@@ -452,14 +451,18 @@ if __name__ == '__main__':
     
     # Calibrate extrinsic parameters from videos
     videos_dir = base_dir / 'data' / 'checkerboard2' / 'videos'
-    results = calibrate_extr_from_vid(str(videos_dir), camLi, camRi)
+    results, fig, slider = calibrate_extr_from_vid(str(videos_dir), camLi, camRi)
     
     print(f"\nProcessed {len(results)} frame pairs successfully")
     for i, (camL, camR, pts3) in enumerate(results):
         print(f'\nFrame {i} (t={i*0.5:.1f}s):')
-        print(f'  Left camera position: {camL.t.T}')
-        print(f'  Right camera position: {camR.t.T}')
+        #print(f'  Left camera position: {camL.t.T}')
+        #print(f'  Right camera position: {camR.t.T}')
 
+    # Validate results against ground truth
+    from validate import validate_camera_positions
+    json_path = videos_dir / 'camera_positions.json'
+    if json_path.exists():
+        validation_results = validate_camera_positions(str(json_path))
 
-    lookL = np.hstack((camL.t,camL.t+camL.R @ np.array([[0,0,30]]).T))
-    lookR = np.hstack((camR.t,camR.t+camR.R @ np.array([[0,0,30]]).T))
+    plt.show()

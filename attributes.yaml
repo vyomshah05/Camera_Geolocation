@@ -1,25 +1,26 @@
 _1 JPG params:
-  shutter_speed: 1/40
-  aperture: f2.8
-  ISO: 1250
-  focal_length: 24 mm
+    shutter_speed: 1/40
+    aperture: f2.8
+    ISO: 1250
+    focal_length: 24 mm
 
+# not used
 _2 JPG params:
   shutter_speed: 1/40
   aperture: f2.8
   ISO: 1250
   focal_length: 70 mm
 
-  ## LEFT and RIGHT is determined from the perspective of the checkerboard
+## LEFT and RIGHT is determined from the perspective of the checkerboard
 left1.JPG and left2.JPG :
-  x: -135 cm (left of camera)
+  x: -135 cm (left of checkerboard)
   y: 87 cm (from ground)
   z: 208 cm
 
   t = [-135,-61,-208]
 
 right1.JPG and right2.JPG:
-  x: 145 cm (145 cm right of camera)
+  x: 145 cm (145 cm right of checkerboard)
   y: 238 cm (from ground)
   z: 358 cm
 
@@ -29,16 +30,47 @@ checkerboard height:
   y: 148 cm (from ground)
 
 
-left.MP4:
+
+
+right.MP4:
   movement: From top of bed to the right of the bed, and ending at where the right camera was initially located at the start
   params:
-    shutter_speed: 1/80
+    shutter_speed: 1/125
+    apaerture: f2.8
+    ISO: 1250
+  
+  Start:
+   x: 145 cm (145 cm right of checkerboard)
+   y: 238 cm (from ground)
+   z: 358 cm
+
+   t = [145,90,-358]
+
+  End:
+    x: -135 cm (left of checkerboard)
+    y: 87 cm (from ground)
+    z: 208 cm
+
+    t = [-135,-61,-208]
+  
+
+left.MP4:
+  movement: From the table, up a little, then move close to the right of the checkerboard, ending with a slight upward angle towards the checkerboard 
+  params:
+    shutter_speed: 1/125
     apaerture: f2.8
     ISO: 1250
 
-right.MP4:
-  movement: From the table, up a little, then move close to the right of the checkerboard, ending with a slight upward angle towards the checkerboard 
-  params:
-    shutter_speed: 1/80
-    apaerture: f2.8
-    ISO: 1250
+  Start:
+    x: -135 cm (left of checkerboard)
+    y: 87 cm (from ground)
+    z: 208 cm
+
+    t = [-135,-61,-208]
+
+  End:
+    x: -40cm (left of checkerboard)
+    y: 120cm (from ground)
+    z: 40cm
+    t = [-40,-24,-40]
+  
