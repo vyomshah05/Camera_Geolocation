@@ -137,7 +137,7 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
     
 
     # extract frames at _intervals_ second intervals
-    intervals = 1
+    intervals = 0.5
 
     # compute minimum duration
     duration = min(durationL, durationR)
@@ -410,7 +410,7 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR, init_poseL=None, init_pos
     cv2.namedWindow(window_name_L, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(window_name_L, 800, 600)
     cv2.imshow(window_name_L, imgL)
-    cv2.waitKey(1000)
+    cv2.waitKey(300)
 
     # visualize right camera:
     cv2.drawChessboardCorners(imgR, (8,6), cornersR, retR)
@@ -419,7 +419,7 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR, init_poseL=None, init_pos
     cv2.namedWindow(window_name_R, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(window_name_R, 800, 600)
     cv2.imshow(window_name_R, imgR)
-    cv2.waitKey(1000)
+    cv2.waitKey(300)
 
     # create checkerboard 3D points:
     pts3 = np.zeros((3,8*6))
@@ -436,7 +436,7 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR, init_poseL=None, init_pos
     
 
     camL = calibratePoseSmooth(pts3, pts2L, camL, init_poseL, prev_poseL, smoothness_weight=50.0)
-    camR = calibratePoseSmooth(pts3, pts2R, camR, init_poseR, prev_poseR, smoothness_weight=50.0)
+    camR = calibratePoseSmooth(pts3, pts2R, camR, init_poseR, prev_poseR, smoothness_weight=6.0)
 
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     return camL, camR, pts3
