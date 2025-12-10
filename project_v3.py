@@ -3,6 +3,7 @@ from calibrate_v2 import calibrate
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
+from scipy.spatial.transform import Rotation as R
 import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.widgets import Slider
@@ -11,6 +12,48 @@ import cv2
 import os
 import pickle
 import json
+
+
+def calibratePoseSmooth(pts3, pts2, cam_init, params_init, prev_params=None, smoothness_weight=10.0):
+    """ Add temporal smoothness regularization to camera pose calibration
+    
+    Args:
+        pts3
+        pts2
+        cam_init: Camera object to update
+        params_init: Initial parameters [rx, ry, rz, tx, ty, tz]
+        prev_params: Previous frame's parameters for smoothness penalty
+        smoothness_weight: Weight for smoothness regularization: (higher = smoother)
+    Returns:
+        Camera: Updated camera object
+    """
+    if prev_params is None:
+        # Use standard cali if no prev frame
+        return calibratePose(pts3, pts2, cam_init, params_init)
+    
+    # error function with smoothness penalty
+    def residuals_smooth(params):
+        
+        reproj_error = residuals(pts3, pts2, cam_init, params)
+        
+        # Smoothness penalty: penalize deviation from previous parameters
+        # deviation between rotation and translation should be weighted seperately
+        rotation_diff = params[0:3] - prev_params[0:3]  # in degrees
+        translation_diff = params[3:6] - prev_params[3:6]  # in cm
+        
+        # Scale rotation difference (normalize by expected max change per frame)
+        # since our recording only has very slow movement, we can expect < 10 degrees rotation
+        smoothness_penalty = np.concatenate([
+            smoothness_weight * rotation_diff / 10.0,  # normalize to ~10 deg
+            smoothness_weight * translation_diff / 20.0  # normalize to ~20 cm
+        ])
+        
+        return np.concatenate([reproj_error, smoothness_penalty])
+    
+    # solve least squares with smoothness constraint
+    popt, _ = scipy.optimize.leastsq(residuals_smooth, params_init)
+    cam_init.update_extrinsics(popt)
+    return cam_init
 
 
 def calibrate_intr(dir_name):
@@ -135,10 +178,38 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
     
     # Process each frame pair with calibrate_extr
     results = []
+    prev_paramsL = None
+    prev_paramsR = None
+    
     for i, (left_path, right_path) in enumerate(frame_pairs):
         print(f"\nProcessing frame pair {i}")
         try:
-            camL_cal, camR_cal, pts3 = calibrate_extr(camL, camR, left_path, right_path)
+            # perform deep copy
+            import copy
+            camL_copy = copy.deepcopy(camL)
+            camR_copy = copy.deepcopy(camR)
+            
+            # Use previous frame's result as initial guess and smoothness constraint
+            if prev_paramsL is not None and prev_paramsR is not None:
+                init_poseL = prev_paramsL
+                init_poseR = prev_paramsR
+                print(f"Previous cam params:")
+                print(f"Left: {init_poseL}")
+                print(f"Right: {init_poseR}")
+                camL_cal, camR_cal, pts3 = calibrate_extr(camL_copy, camR_copy, left_path, right_path, init_poseL, init_poseR, prev_paramsL, prev_paramsR)
+            else:
+                print(f"Use default init params")
+                camL_cal, camR_cal, pts3 = calibrate_extr(camL_copy, camR_copy, left_path, right_path)
+            
+            # Extract parameters from calibrated cameras for next frame
+            rot_L = R.from_matrix(camL_cal.R)
+            rot_R = R.from_matrix(camR_cal.R)
+            euler_L = rot_L.as_euler('xyz', degrees=True)
+            euler_R = rot_R.as_euler('xyz', degrees=True)
+            prev_paramsL = np.concatenate([euler_L, camL_cal.t.flatten()])
+            prev_paramsR = np.concatenate([euler_R, camR_cal.t.flatten()])
+            
+            print(f"Positions: Left: {camL_cal.t.T}, Right: {camR_cal.t.T}")
             results.append((camL_cal, camR_cal, pts3))
         except Exception as e:
             print(f"Unable to process frame pair {i}: {e}")
@@ -179,7 +250,7 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
                      fontsize=14, fontweight='bold')
         
         # 3D view
-        ax_3d.view_init(elev=35, azim=163, roll=-100)
+        ax_3d.view_init(elev=-58, azim=51, roll=43)
         ax_3d.scatter(pts3[0,:],pts3[1,:],pts3[2,:],'k', marker='x', label='Checkerboard')
         ax_3d.plot(camR_cal.t[0],camR_cal.t[1],camR_cal.t[2],'ro', markersize=10, label='Right Camera')
         ax_3d.plot(camL_cal.t[0],camL_cal.t[1],camL_cal.t[2],'bo', markersize=10, label='Left Camera')
@@ -275,14 +346,16 @@ def calibrate_extr_from_vid(dir_name, camL, camR):
     
     return results
 
-def calibrate_extr(camL, camR, file_pathL, file_pathR):
+def calibrate_extr(camL, camR, file_pathL, file_pathR, init_poseL=None, init_poseR=None, prev_poseL=None, prev_poseR=None):
     """ Calibrate the extrinsic parameters of the camera given 3D-2D point correspondences.
     
     Args:
-        cam (Camera): Camera object with known intrinsic parameters.
-        file_path (str): Path to the file containing 3D-2D point correspondences.
+        camL (Camera): Left camera object with known intrinsic parameters.
+        camR (Camera): Right camera object with known intrinsic parameters.
+        file_pathL (str): Path to the left image file.
+        ...
     Returns:
-        (CameraL, CameraR): Camera objects with updated extrinsic parameters.
+        (CameraL, CameraR, pts3): Camera objects with updated extrinsic parameters and triangulated points.
     """
     # optimize the extrinsic parameters to minimize reprojection error
     imgL = cv2.imread(file_pathL)
@@ -318,10 +391,16 @@ def calibrate_extr(camL, camR, file_pathL, file_pathR):
     pts3[0,:] = 2.8*xx.reshape(1,-1)
     pts3[1,:] = 2.8*yy.reshape(1,-1)
 
-    # Need to fix this add temporal adjustment to initialization
     # Initial pose parameters: [rx, ry, rz, tx, ty, tz]
-    camL = calibratePose(pts3,pts2L,camL,np.array([-180, 0, 0, -145, -61, 208]))
-    camR = calibratePose(pts3,pts2R,camR,np.array([-180, 0, 0, 135, 90, 358]))
+    # Use provided initial poses or default values
+    if init_poseL is None:
+        init_poseL = np.array([-180, 0, 0, -145, -61, 208])
+    if init_poseR is None:
+        init_poseR = np.array([-180, 0, 0, 135, 90, 358])
+    
+
+    camL = calibratePoseSmooth(pts3, pts2L, camL, init_poseL, prev_poseL, smoothness_weight=50.0)
+    camR = calibratePoseSmooth(pts3, pts2R, camR, init_poseR, prev_poseR, smoothness_weight=50.0)
 
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     return camL, camR, pts3
