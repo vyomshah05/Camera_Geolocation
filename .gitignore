@@ -8,6 +8,7 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 *$py.class
+*.pickle
 
 # Environments
 .env

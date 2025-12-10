@@ -17,6 +17,10 @@ python project_v3.py
 
 **project_v2.py** - Script to perform camera localization from images. Shows plot with multiple view angles and prints error stats in terminal.
 
+**visualization.gif** - gif of the plot generated from project_v3.py
+
+**camera_animation.gif** - gif of selection of frames from Left and Right Camera for project_v3.py
+
 **validate.py** - Runs error analysis
 
 **calibrate_v2.py** - Modified calibrate script provided from Assignment 3
