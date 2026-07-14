@@ -1,0 +1,25 @@
+# Single source of truth for the tape-measured camera positions.
+# Units: cm, in the board (world) frame: origin at the first inner corner,
+# x along the 8-corner edge, y along the 6-corner edge (downward),
+# z out of the board toward the cameras is NEGATIVE.
+# Derivation of y values: board origin is 148 cm above the ground, so
+# y = 148 - camera_height_from_ground (see attributes.yaml for raw notes).
+#
+# NOTE (2026-07-10 accuracy analysis): estimates are a consistent ~8.7% too
+# far radially, which is the signature of a square-size scale error. If the
+# printed squares are actually ~2.565 cm (measure the span of 7 squares:
+# 19.6 cm if truly 2.8, ~17.9 cm if shrunk by "fit to page" printing), fix
+# square_size_cm below and the bias disappears.
+
+square_size_cm: 2.8
+board_inner_corners: [8, 6]
+
+# rotation [rx, ry, rz] in degrees used to anchor branch disambiguation
+anchor_rotation_deg: [-180, 0, 0]
+
+left:
+  start: [-135, -61, -208]
+  end: [-40, -24, -40]
+right:
+  start: [145, 90, -358]
+  end: [-135, -61, -208]
