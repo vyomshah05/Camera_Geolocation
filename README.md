@@ -21,6 +21,8 @@ python project_v3.py
 
 ![v4 camera localization](visualization_v4.gif)
 
+> **Naming convention:** "left" and "right" cameras are named from the **checkerboard's perspective** (see `attributes.yaml`). Facing the board as the videographer, they are mirrored — the take you shoot standing on your left is `right.MP4`. In the gif: red (`right.MP4`) starts high on the board's right and traverses to the other camera's starting position; blue (`left.MP4`) starts at table height and moves in close to the board.
+
 **Headline: 32 cm mean absolute localization error at 2.5–4 m working distance — a 2.5× improvement over v3 — from a checkerboard that spans only ~60–90 pixels of the frame.**
 
 Highlights:
@@ -80,8 +82,8 @@ Other v4 fixes: corners are undistorted with the calibrated distortion model, su
 **data/checkerboard2/** - Main 6x8 checkerboard used for project_v2 and project_v3
 
 **data/checkerboard2/videos/** - Contains:
-- `left.MP4` - Left camera video for project_v3
-- `right.MP4` - Right camera video for project_v3
+- `left.MP4` - Left camera video (left/right named from the checkerboard's perspective)
+- `right.MP4` - Right camera video
 - `camera_positions.json` - JSON storing all of the location data for project_v3
 
 **data/checkerboard2/positions1/** - Images for extrinsic calibration/localization for project_v2
