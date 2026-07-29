@@ -17,6 +17,20 @@ python project_v2.py
 python project_v3.py
 ```
 
+## Setup
+
+Two takes were recorded one after the other with the same camera (Canon R6 Mark II, 24 mm, manual exposure, digital IS off) in a bedroom, with an 8×6 checkerboard on the far wall defining the world frame. The wide shot below is taken from roughly `right.MP4`'s starting position (top of the bed):
+
+![wide angle view of the room](pics_for_documentation/Wide_angle.jpg)
+
+The two camera paths — red (`right.MP4`) starts high at the top of the bed and traverses across the room to the other camera's starting position at the desk; blue (`left.MP4`) starts at the desk and moves in close to the checkerboard:
+
+![annotated camera paths](pics_for_documentation/path.jpg)
+
+Ground-truth start positions were tape-measured per axis relative to the checkerboard (note: the L/R subscripts in this annotation are from the videographer's viewpoint, i.e. mirrored from the `left.MP4`/`right.MP4` naming — see the convention note below; the values recorded at measurement time live in `attributes.yaml` and `ground_truth.yaml`):
+
+![annotated tape measurements](pics_for_documentation/measurements.jpg)
+
 ## Results
 
 ![v4 camera localization](visualization_v4.gif)
