@@ -59,6 +59,34 @@ def make_figure(results, pts3, interactive=True):
     ax_yz = fig.add_subplot(2, 2, 3)
     ax_xy = fig.add_subplot(2, 2, 4)
 
+    view_defs = [
+        (ax_xz, 'XZ-view (Top View)', lambda v: v[0], lambda v: -v[2],
+         'x (cm)', 'z (cm)'),
+        (ax_yz, 'YZ-view (Side View)', lambda v: -v[2], lambda v: v[1],
+         '-z (cm)', 'y (cm)'),
+        (ax_xy, 'XY-view (Front View from Checkerboard)',
+         lambda v: v[0], lambda v: v[1], 'x (cm)', 'y (cm)'),
+    ]
+
+    # constant axis limits across all frames: bounds of every camera
+    # position, look vector and board point over the whole sequence
+    allp = [pts3]
+    for fr in results:
+        g = frame_geometry(fr)
+        allp.append(g['left'][2])
+        allp.append(g['right'][2])
+    allp = np.hstack(allp)
+    mins, maxs = allp.min(axis=1), allp.max(axis=1)
+    ctr = (mins + maxs) / 2
+    r3 = float((maxs - mins).max()) / 2 * 1.05
+    lims2d = []
+    for _, _, fh, fv, _, _ in view_defs:
+        h, v = fh(allp), fv(allp)
+        ph = 0.05 * (h.max() - h.min())
+        pv = 0.05 * (v.max() - v.min())
+        lims2d.append(((h.min() - ph, h.max() + ph),
+                       (v.min() - pv, v.max() + pv)))
+
     def update_plot(frame_idx):
         frame_idx = int(frame_idx)
         frame = results[frame_idx]
@@ -92,22 +120,19 @@ def make_figure(results, pts3, interactive=True):
                    f"z diff: {d[2]:.1f} cm\ndistance: {dist:.1f} cm",
                    color='purple',
                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='black'))
-        visutils.set_axes_equal_3d(ax_3d)
+        ax_3d.set_xlim3d(ctr[0] - r3, ctr[0] + r3)
+        ax_3d.set_ylim3d(ctr[1] - r3, ctr[1] + r3)
+        ax_3d.set_zlim3d(ctr[2] - r3, ctr[2] + r3)
         visutils.label_axes(ax_3d)
         ax_3d.set_title('Scene 3D View')
         ax_3d.legend()
 
-        # orthographic views: (title, horizontal fn, vertical fn, labels)
-        views = [
-            (ax_xz, 'XZ-view (Top View)', lambda v: v[0], lambda v: -v[2],
-             'x (cm)', 'z (cm)', f"x diff: {d[0]:.1f} cm\nz diff: {d[2]:.1f} cm"),
-            (ax_yz, 'YZ-view (Side View)', lambda v: -v[2], lambda v: v[1],
-             '-z (cm)', 'y (cm)', f"y diff: {d[1]:.1f} cm\nz diff: {d[2]:.1f} cm"),
-            (ax_xy, 'XY-view (Front View from Checkerboard)',
-             lambda v: v[0], lambda v: v[1],
-             'x (cm)', 'y (cm)', f"x diff: {d[0]:.1f} cm\ny diff: {d[1]:.1f} cm"),
+        texts = [
+            f"x diff: {d[0]:.1f} cm\nz diff: {d[2]:.1f} cm",
+            f"y diff: {d[1]:.1f} cm\nz diff: {d[2]:.1f} cm",
+            f"x diff: {d[0]:.1f} cm\ny diff: {d[1]:.1f} cm",
         ]
-        for ax, title, fh, fv, xl, yl, txt in views:
+        for (ax, title, fh, fv, xl, yl), (hlim, vlim), txt in zip(view_defs, lims2d, texts):
             ax.plot(fh(pts3), fv(pts3), 'k.', label='Checkerboard')
             ax.plot(fh(pR), fv(pR), 'ro', markersize=10, label='Right Camera')
             ax.plot(fh(pL), fv(pL), 'bo', markersize=10, label='Left Camera')
@@ -122,7 +147,9 @@ def make_figure(results, pts3, interactive=True):
             ax.set_xlabel(xl)
             ax.set_ylabel(yl)
             ax.legend()
-            ax.axis('equal')
+            ax.set_xlim(hlim)
+            ax.set_ylim(vlim)
+            ax.set_aspect('equal', adjustable='box')
 
         if interactive:
             fig.canvas.draw_idle()
